@@ -12,7 +12,7 @@ export const MILESTONES: Milestone[] = [
   { name: "Complete Theory of Computation", date: "2026-06-30" },
   { name: "Complete Digital Logic", date: "2026-07-10" },
   { name: "Complete COA", date: "2026-07-20" },
-  { name: "Revision Phase Begins", date: "2026-08-11" },
+  { name: "Revision Phase Begins", date: "2026-08-14" },
   { name: "GATE 2027 Exam", date: "2027-02-01" },
 ];
 
