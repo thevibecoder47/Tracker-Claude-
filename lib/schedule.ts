@@ -136,7 +136,7 @@ export function generateSchedule(): Record<string, DaySchedule> {
   }
 
   // Assign lectures per day
-  const start = new Date('2026-04-03');
+  const start = new Date('2026-04-04');
   const end = new Date('2026-08-13');
 
   // Track last subject used to avoid 4 consecutive from same
