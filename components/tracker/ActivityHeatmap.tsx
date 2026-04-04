@@ -33,8 +33,8 @@ export default function ActivityHeatmap() {
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Date range: Apr 1 2026 → Feb 1 2027
-  const startDate = new Date('2026-04-01');
+  // Date range: Mar 27 2026 → Feb 1 2027
+  const startDate = new Date('2026-03-27');
   const endDate = new Date('2027-02-01');
 
   // Build columns (each column = one week, Sun→Sat)
@@ -99,7 +99,7 @@ export default function ActivityHeatmap() {
     <GlassCard noPad>
       <div className="px-4 pt-4 pb-2 border-b border-[var(--card-border)]">
         <h3 className="font-semibold text-sm text-[var(--text-primary)]">Activity Heatmap</h3>
-        <p className="text-xs text-[var(--text-muted)]">Apr 2026 – Feb 2027</p>
+        <p className="text-xs text-[var(--text-muted)]">Mar 2026 – Feb 2027</p>
       </div>
 
       <div ref={containerRef} className="overflow-x-auto p-4 relative">

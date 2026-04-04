@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GateStore, LectureProgress, TestProgress, StreakData, UserProfile, DaySchedule } from '@/types';
+import { GateStore, LectureProgress, TestProgress, StreakData } from '@/types';
 import {
   markLectureComplete,
   unmarkLectureComplete,
@@ -10,10 +10,9 @@ import {
   updateStreak,
   getUserProfile,
   setUserTheme,
-  seedPreCompletedData,
 } from '@/lib/firestore';
 import { generateSchedule } from '@/lib/schedule';
-import { calculateStreak, getDayKey } from '@/lib/utils';
+import { calculateStreak } from '@/lib/utils';
 
 export const useGateStore = create<GateStore>((set, get) => ({
   uid: null,
@@ -32,18 +31,10 @@ export const useGateStore = create<GateStore>((set, get) => ({
     const { uid } = get();
     set({ theme });
     if (typeof document !== 'undefined') {
-      if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      document.documentElement.classList.toggle('dark', theme === 'dark');
     }
     if (uid) {
-      try {
-        await setUserTheme(uid, theme);
-      } catch (err) {
-        console.error('setTheme error:', err);
-      }
+      try { await setUserTheme(uid, theme); } catch (err) { console.error(err); }
     }
   },
 
@@ -51,6 +42,7 @@ export const useGateStore = create<GateStore>((set, get) => ({
     const { uid, lectureProgress, streakData, schedule } = get();
     if (!uid) return;
 
+    // Optimistic update
     const newProgress: LectureProgress = {
       ...lectureProgress,
       [globalLecId]: { completedAt: new Date().toISOString(), date },
@@ -63,6 +55,7 @@ export const useGateStore = create<GateStore>((set, get) => ({
       set({ streakData: newStreak });
       await updateStreak(uid, newStreak);
     } catch (err) {
+      // Rollback
       const rolled = { ...get().lectureProgress };
       delete rolled[globalLecId];
       set({ lectureProgress: rolled });
@@ -85,9 +78,7 @@ export const useGateStore = create<GateStore>((set, get) => ({
       set({ streakData: newStreak });
       await updateStreak(uid, newStreak);
     } catch (err) {
-      if (prev) {
-        set({ lectureProgress: { ...get().lectureProgress, [globalLecId]: prev } });
-      }
+      if (prev) set({ lectureProgress: { ...get().lectureProgress, [globalLecId]: prev } });
       console.error('unmarkLecture error:', err);
     }
   },
@@ -96,10 +87,7 @@ export const useGateStore = create<GateStore>((set, get) => ({
     const { uid, testProgress } = get();
     if (!uid) return;
 
-    const newTestProgress: TestProgress = {
-      ...testProgress,
-      [testId]: { date },
-    };
+    const newTestProgress: TestProgress = { ...testProgress, [testId]: { date } };
     set({ testProgress: newTestProgress });
 
     try {
@@ -114,9 +102,6 @@ export const useGateStore = create<GateStore>((set, get) => ({
 
   loadProgress: async (uid) => {
     try {
-      // Seed pre-completed data on first login (no-op if already seeded)
-      await seedPreCompletedData(uid);
-
       const [lectureProgress, testProgress, streakData, userProfile] = await Promise.all([
         getLectureProgress(uid),
         getTestProgress(uid),
@@ -124,20 +109,10 @@ export const useGateStore = create<GateStore>((set, get) => ({
         getUserProfile(uid),
       ]);
 
-      set({
-        lectureProgress,
-        testProgress,
-        streakData,
-        userProfile,
-        theme: userProfile.theme,
-      });
+      set({ lectureProgress, testProgress, streakData, userProfile, theme: userProfile.theme });
 
       if (typeof document !== 'undefined') {
-        if (userProfile.theme === 'dark') {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
+        document.documentElement.classList.toggle('dark', userProfile.theme === 'dark');
       }
     } catch (err) {
       console.error('loadProgress error:', err);

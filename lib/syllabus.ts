@@ -76,7 +76,6 @@ export const SYLLABUS: Subject[] = [
     totalLectures: 13,
     chapters: [
       { id: "la_c1", name: "Basic of Determinants & Matrices", lectures: 1, tests: [] },
-      // Test 1 triggers at Lec 14 across both chapters (Lec 13 of this chapter = overall lec 14)
       { id: "la_c2", name: "Linear Algebra - 1", lectures: 12,
         tests: [{ id: "la_t1", number: 1, triggerLec: 12 }]},
     ]
@@ -101,7 +100,6 @@ export const SYLLABUS: Subject[] = [
     id: "basic_cs",
     name: "Basic of Computer System",
     totalLectures: 10,
-    preCompleted: 10,
     chapters: [
       { id: "bcs_c1", name: "Basic of Computer System", lectures: 10, tests: [] },
     ]
@@ -110,7 +108,6 @@ export const SYLLABUS: Subject[] = [
     id: "fund_c",
     name: "Fundamentals of C Language",
     totalLectures: 20,
-    preCompleted: 15,
     chapters: [
       { id: "fc_c1", name: "Introduction", lectures: 2, tests: [] },
       { id: "fc_c2", name: "Datatypes & Operators", lectures: 5, tests: [] },
@@ -123,13 +120,11 @@ export const SYLLABUS: Subject[] = [
   {
     id: "c_prog",
     name: "C Programming",
-    // PDF shows Structure & Union = 1 lecture (not 2), so total = 18
     totalLectures: 18,
     chapters: [
       { id: "cp_c1", name: "Data Types & Operators", lectures: 4, tests: [] },
       { id: "cp_c2", name: "Control Flow Statements", lectures: 4,
         tests: [{ id: "cp_t1", number: 1, triggerLec: 4 }]},
-      // Tests 2 & 3 trigger at overall Lec 5 of Function & Storage Class chapter
       { id: "cp_c3", name: "Function & Storage Class", lectures: 3,
         tests: [
           { id: "cp_t2", number: 2, triggerLec: 3 },
@@ -137,7 +132,6 @@ export const SYLLABUS: Subject[] = [
         ]},
       { id: "cp_c4", name: "Array & Pointer", lectures: 4, tests: [] },
       { id: "cp_c5", name: "String 01", lectures: 2, tests: [] },
-      // Tests 4 & 5 trigger at Lec 1 of Structure & Union
       { id: "cp_c6", name: "Structure & Union", lectures: 1,
         tests: [
           { id: "cp_t4", number: 4, triggerLec: 1 },
@@ -179,11 +173,9 @@ export const SYLLABUS: Subject[] = [
         tests: [{ id: "al_t4", number: 4, triggerLec: 4 }]},
       { id: "al_c5", name: "Dynamic Programming (DP)", lectures: 8,
         tests: [{ id: "al_t5", number: 5, triggerLec: 3 }]},
-      // Test 6 triggers at Lec 6 — but chapter only has 3 lecs, so trigger at last lec (3)
       { id: "al_c6", name: "Graph Algorithm", lectures: 3,
         tests: [{ id: "al_t6", number: 6, triggerLec: 3 }]},
       { id: "al_c7", name: "Heap Algorithm", lectures: 3, tests: [] },
-      // Test 7 (Full Syllabus) triggers at Lec 7 — but chapter has 4 lecs, trigger at 4
       { id: "al_c8", name: "Miscellaneous", lectures: 4,
         tests: [{ id: "al_t7", number: 7, triggerLec: 4 }]},
     ]
@@ -308,7 +300,6 @@ export const SYLLABUS: Subject[] = [
       { id: "cd_c2", name: "Parsers", lectures: 6,
         tests: [
           { id: "cd_t1", number: 1, triggerLec: 3 },
-          // Test 2 triggers at Lec 7 — chapter has 6 lecs, so trigger at last lec (6)
           { id: "cd_t2", number: 2, triggerLec: 6 },
         ]},
       { id: "cd_c3", name: "Syntax Directed Translation", lectures: 2,

@@ -14,13 +14,20 @@ export function isExamPeriod(date: Date): boolean {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EXACT DAILY SUBJECT PLAN from the Excel sheet
-// Format: "YYYY-MM-DD" -> { subjectId: lectureCount }
-// Subjects that appear together on one day are listed together.
+// EXACT DAILY PLAN from Excel — Mar 27 2026 → Aug 9 2026
+// No pre-completed lectures. You mark everything yourself.
 // ─────────────────────────────────────────────────────────────────────────────
 const DAILY_PLAN: Record<string, Record<string, number>> = {
-  // APRIL — Basic CS (pre-done), Fund C finishes, Prereq Math, Discrete Math start
-  "2026-04-03": { fund_c: 2 },
+  // MARCH
+  "2026-03-27": { basic_cs: 2, fund_c: 2 },
+  "2026-03-28": { basic_cs: 2, fund_c: 2 },
+  "2026-03-29": { basic_cs: 2, fund_c: 2 },
+  "2026-03-30": { basic_cs: 2, fund_c: 2 },
+  "2026-03-31": { basic_cs: 2, fund_c: 2 },
+  // APRIL
+  "2026-04-01": { fund_c: 2 },
+  "2026-04-02": { fund_c: 2 },
+  "2026-04-03": { fund_c: 1 },
   "2026-04-04": { fund_c: 2 },
   "2026-04-05": { fund_c: 2, prereq_math: 2 },
   "2026-04-06": { fund_c: 1, prereq_math: 2, discrete_math: 1 },
@@ -58,7 +65,6 @@ const DAILY_PLAN: Record<string, Record<string, number>> = {
   "2026-05-07": { c_prog: 2, data_structures: 2 },
   "2026-05-08": { c_prog: 2, data_structures: 2 },
   "2026-05-09": { c_prog: 2, data_structures: 2 },
-  // Exam period May 10–23: lighter schedule
   "2026-05-10": { c_prog: 2, data_structures: 2 },
   "2026-05-11": { c_prog: 1 },
   "2026-05-12": { c_prog: 1 },
@@ -157,8 +163,7 @@ const DAILY_PLAN: Record<string, Record<string, number>> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Build a flat lecture queue per subject (skipping pre-completed)
-// Returns: array of { subjectId, subjectName, chapterId, chapterName, lecNum, globalLecId }
+// Build lecture queue per subject — sequential, no skipping
 // ─────────────────────────────────────────────────────────────────────────────
 interface LecItem {
   subjectId: string;
@@ -167,7 +172,6 @@ interface LecItem {
   chapterName: string;
   lecNum: number;
   globalLecId: string;
-  // test that fires AFTER this lecture is completed (if any)
   triggeredTests: Array<{
     testId: string;
     subjectId: string;
@@ -179,61 +183,46 @@ interface LecItem {
   }>;
 }
 
-function buildLectureQueue(subjectId: string): LecItem[] {
+function buildQueue(subjectId: string): LecItem[] {
   const subject = SYLLABUS.find(s => s.id === subjectId);
   if (!subject) return [];
-  const preCompleted = subject.preCompleted ?? 0;
   const queue: LecItem[] = [];
-  let globalOffset = 0;
-
   for (const ch of subject.chapters) {
     for (let l = 1; l <= ch.lectures; l++) {
-      const globalLecNum = globalOffset + l;
-      if (globalLecNum <= preCompleted) {
-        // already done — skip
-      } else {
-        // check if this lecture triggers any tests
-        const triggeredTests = ch.tests
-          .filter(t => t.triggerLec === l)
-          .map(t => ({
-            testId: t.id,
-            subjectId: subject.id,
-            subjectName: subject.name,
-            chapterId: ch.id,
-            chapterName: ch.name,
-            testNum: t.number,
-            label: `${subject.name} — Test ${t.number}`,
-          }));
-
-        queue.push({
+      const triggeredTests = ch.tests
+        .filter(t => t.triggerLec === l)
+        .map(t => ({
+          testId: t.id,
           subjectId: subject.id,
           subjectName: subject.name,
           chapterId: ch.id,
           chapterName: ch.name,
-          lecNum: l,
-          globalLecId: `${ch.id}_lec${l}`,
-          triggeredTests,
-        });
-      }
+          testNum: t.number,
+          label: `${subject.name} — Test ${t.number}`,
+        }));
+      queue.push({
+        subjectId: subject.id,
+        subjectName: subject.name,
+        chapterId: ch.id,
+        chapterName: ch.name,
+        lecNum: l,
+        globalLecId: `${ch.id}_lec${l}`,
+        triggeredTests,
+      });
     }
-    globalOffset += ch.lectures;
   }
   return queue;
 }
 
-// Build queues for all subjects upfront
-const LECTURE_QUEUES: Record<string, LecItem[]> = {};
-const QUEUE_POINTERS: Record<string, number> = {};
-
-function initQueues() {
-  for (const s of SYLLABUS) {
-    LECTURE_QUEUES[s.id] = buildLectureQueue(s.id);
-    QUEUE_POINTERS[s.id] = 0;
-  }
-}
-
 export function generateSchedule(): Record<string, DaySchedule> {
-  initQueues();
+  // Build all queues fresh
+  const queues: Record<string, LecItem[]> = {};
+  const ptrs: Record<string, number> = {};
+  for (const s of SYLLABUS) {
+    queues[s.id] = buildQueue(s.id);
+    ptrs[s.id] = 0;
+  }
+
   const schedule: Record<string, DaySchedule> = {};
 
   for (const [dateKey, subjectCounts] of Object.entries(DAILY_PLAN)) {
@@ -243,14 +232,13 @@ export function generateSchedule(): Record<string, DaySchedule> {
     const tests: ScheduledTest[] = [];
 
     for (const [subjectId, count] of Object.entries(subjectCounts)) {
-      const queue = LECTURE_QUEUES[subjectId];
+      const queue = queues[subjectId];
       if (!queue) continue;
-      let ptr = QUEUE_POINTERS[subjectId];
+      let ptr = ptrs[subjectId];
 
       for (let i = 0; i < count; i++) {
         if (ptr >= queue.length) break;
-        const item = queue[ptr];
-        ptr++;
+        const item = queue[ptr++];
 
         lectures.push({
           subjectId: item.subjectId,
@@ -261,7 +249,6 @@ export function generateSchedule(): Record<string, DaySchedule> {
           globalLecId: item.globalLecId,
         });
 
-        // attach triggered tests
         for (const t of item.triggeredTests) {
           tests.push({
             testId: t.testId,
@@ -274,7 +261,7 @@ export function generateSchedule(): Record<string, DaySchedule> {
           });
         }
       }
-      QUEUE_POINTERS[subjectId] = ptr;
+      ptrs[subjectId] = ptr;
     }
 
     schedule[dateKey] = {

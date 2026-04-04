@@ -4,11 +4,12 @@ export interface Milestone {
 }
 
 export const MILESTONES: Milestone[] = [
+  { name: "Complete Basic of Computer System", date: "2026-03-31" },
   { name: "Complete Fundamentals of C Language", date: "2026-04-06" },
   { name: "Complete Prerequisites Math", date: "2026-04-17" },
   { name: "Complete Discrete Mathematics", date: "2026-04-29" },
   { name: "Complete Probability & Statistics", date: "2026-04-27" },
-  { name: "Complete Linear Algebra", date: "2026-05-03" },
+  { name: "Complete Linear Algebra", date: "2026-05-04" },
   { name: "Complete Calculus & Optimization", date: "2026-05-06" },
   { name: "Complete C Programming", date: "2026-05-16" },
   { name: "Complete Data Structures", date: "2026-05-29" },
@@ -35,9 +36,9 @@ export function getUpcomingMilestones(count = 3): (Milestone & { daysLeft: numbe
       const mDate = new Date(m.date);
       mDate.setHours(0, 0, 0, 0);
       const daysLeft = Math.ceil((mDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      let color = '#34d399'; // green >30 days
-      if (daysLeft <= 10) color = '#f87171'; // red
-      else if (daysLeft <= 30) color = '#fbbf24'; // yellow
+      let color = '#34d399';
+      if (daysLeft <= 10) color = '#f87171';
+      else if (daysLeft <= 30) color = '#fbbf24';
       return { ...m, daysLeft, color };
     })
     .filter(m => m.daysLeft >= 0)
