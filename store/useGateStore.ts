@@ -10,6 +10,7 @@ import {
   updateStreak,
   getUserProfile,
   setUserTheme,
+  seedPreCompletedData,
 } from '@/lib/firestore';
 import { generateSchedule } from '@/lib/schedule';
 import { calculateStreak, getDayKey } from '@/lib/utils';
@@ -50,7 +51,6 @@ export const useGateStore = create<GateStore>((set, get) => ({
     const { uid, lectureProgress, streakData, schedule } = get();
     if (!uid) return;
 
-    // Optimistic update
     const newProgress: LectureProgress = {
       ...lectureProgress,
       [globalLecId]: { completedAt: new Date().toISOString(), date },
@@ -59,13 +59,10 @@ export const useGateStore = create<GateStore>((set, get) => ({
 
     try {
       await markLectureComplete(uid, globalLecId, date);
-
-      // Recalculate streak
       const newStreak = calculateStreak(newProgress, schedule, streakData);
       set({ streakData: newStreak });
       await updateStreak(uid, newStreak);
     } catch (err) {
-      // Rollback on error
       const rolled = { ...get().lectureProgress };
       delete rolled[globalLecId];
       set({ lectureProgress: rolled });
@@ -84,13 +81,10 @@ export const useGateStore = create<GateStore>((set, get) => ({
 
     try {
       await unmarkLectureComplete(uid, globalLecId);
-
-      // Recalculate streak
       const newStreak = calculateStreak(newProgress, schedule, streakData);
       set({ streakData: newStreak });
       await updateStreak(uid, newStreak);
     } catch (err) {
-      // Rollback
       if (prev) {
         set({ lectureProgress: { ...get().lectureProgress, [globalLecId]: prev } });
       }
@@ -120,6 +114,9 @@ export const useGateStore = create<GateStore>((set, get) => ({
 
   loadProgress: async (uid) => {
     try {
+      // Seed pre-completed data on first login (no-op if already seeded)
+      await seedPreCompletedData(uid);
+
       const [lectureProgress, testProgress, streakData, userProfile] = await Promise.all([
         getLectureProgress(uid),
         getTestProgress(uid),
@@ -135,7 +132,6 @@ export const useGateStore = create<GateStore>((set, get) => ({
         theme: userProfile.theme,
       });
 
-      // Apply theme
       if (typeof document !== 'undefined') {
         if (userProfile.theme === 'dark') {
           document.documentElement.classList.add('dark');

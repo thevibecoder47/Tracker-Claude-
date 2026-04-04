@@ -1,4 +1,4 @@
-import { DaySchedule, ScheduledLecture, ScheduledTest, Subject } from '@/types';
+import { DaySchedule, ScheduledLecture, ScheduledTest } from '@/types';
 import { SYLLABUS } from './syllabus';
 
 export function getDayKey(date: Date): string {
@@ -13,6 +13,153 @@ export function isExamPeriod(date: Date): boolean {
   return d >= new Date('2026-05-10').getTime() && d <= new Date('2026-05-23').getTime();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EXACT DAILY SUBJECT PLAN from the Excel sheet
+// Format: "YYYY-MM-DD" -> { subjectId: lectureCount }
+// Subjects that appear together on one day are listed together.
+// ─────────────────────────────────────────────────────────────────────────────
+const DAILY_PLAN: Record<string, Record<string, number>> = {
+  // APRIL — Basic CS (pre-done), Fund C finishes, Prereq Math, Discrete Math start
+  "2026-04-03": { fund_c: 2 },
+  "2026-04-04": { fund_c: 2 },
+  "2026-04-05": { fund_c: 2, prereq_math: 2 },
+  "2026-04-06": { fund_c: 1, prereq_math: 2, discrete_math: 1 },
+  "2026-04-07": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-08": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-09": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-10": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-11": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-12": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-13": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-14": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-15": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-16": { prereq_math: 2, discrete_math: 2 },
+  "2026-04-17": { prereq_math: 1, discrete_math: 2, prob_stats: 1 },
+  "2026-04-18": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-19": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-20": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-21": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-22": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-23": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-24": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-25": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-26": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-27": { discrete_math: 2, prob_stats: 2 },
+  "2026-04-28": { discrete_math: 2, linear_algebra: 2 },
+  "2026-04-29": { discrete_math: 2, linear_algebra: 2 },
+  "2026-04-30": { linear_algebra: 2, calculus: 2 },
+  // MAY
+  "2026-05-01": { linear_algebra: 2, calculus: 2 },
+  "2026-05-02": { linear_algebra: 2, calculus: 2 },
+  "2026-05-03": { linear_algebra: 2, calculus: 2 },
+  "2026-05-04": { linear_algebra: 1, calculus: 3, c_prog: 1 },
+  "2026-05-05": { calculus: 2, c_prog: 2 },
+  "2026-05-06": { calculus: 2, c_prog: 2 },
+  "2026-05-07": { c_prog: 2, data_structures: 2 },
+  "2026-05-08": { c_prog: 2, data_structures: 2 },
+  "2026-05-09": { c_prog: 2, data_structures: 2 },
+  // Exam period May 10–23: lighter schedule
+  "2026-05-10": { c_prog: 2, data_structures: 2 },
+  "2026-05-11": { c_prog: 1 },
+  "2026-05-12": { c_prog: 1 },
+  "2026-05-13": { c_prog: 1 },
+  "2026-05-14": { c_prog: 1 },
+  "2026-05-15": { c_prog: 1 },
+  "2026-05-16": { c_prog: 1 },
+  "2026-05-17": { data_structures: 1 },
+  "2026-05-18": { data_structures: 1 },
+  "2026-05-19": { data_structures: 1 },
+  "2026-05-20": { data_structures: 1 },
+  "2026-05-21": { data_structures: 1 },
+  "2026-05-22": { data_structures: 1 },
+  "2026-05-23": { data_structures: 2, algorithms: 2 },
+  "2026-05-24": { data_structures: 2, algorithms: 2 },
+  "2026-05-25": { data_structures: 2, algorithms: 2 },
+  "2026-05-26": { data_structures: 2, algorithms: 2 },
+  "2026-05-27": { data_structures: 2, algorithms: 2 },
+  "2026-05-28": { data_structures: 2, algorithms: 2 },
+  "2026-05-29": { data_structures: 2, algorithms: 2 },
+  "2026-05-30": { algorithms: 2, dbms: 2 },
+  "2026-05-31": { algorithms: 2, dbms: 2 },
+  // JUNE
+  "2026-06-01": { algorithms: 2, dbms: 2 },
+  "2026-06-02": { algorithms: 2, dbms: 2 },
+  "2026-06-03": { algorithms: 2, dbms: 2 },
+  "2026-06-04": { algorithms: 2, dbms: 2 },
+  "2026-06-05": { algorithms: 2, dbms: 2 },
+  "2026-06-06": { algorithms: 2, dbms: 2 },
+  "2026-06-07": { algorithms: 2, dbms: 2 },
+  "2026-06-08": { algorithms: 2, toc: 2 },
+  "2026-06-09": { algorithms: 2, toc: 2 },
+  "2026-06-10": { algorithms: 2, toc: 2 },
+  "2026-06-11": { algorithms: 2, toc: 2 },
+  "2026-06-12": { algorithms: 2, toc: 2 },
+  "2026-06-13": { algorithms: 2, toc: 2 },
+  "2026-06-14": { algorithms: 2, toc: 2 },
+  "2026-06-15": { algorithms: 2, toc: 2 },
+  "2026-06-16": { toc: 2, coa: 2 },
+  "2026-06-17": { toc: 2, coa: 2 },
+  "2026-06-18": { toc: 2, coa: 2 },
+  "2026-06-19": { toc: 2, coa: 2 },
+  "2026-06-20": { toc: 2, coa: 2 },
+  "2026-06-21": { toc: 2, coa: 2 },
+  "2026-06-22": { toc: 1, coa: 2, digital_logic: 1 },
+  "2026-06-23": { coa: 2, digital_logic: 2 },
+  "2026-06-24": { coa: 2, digital_logic: 2 },
+  "2026-06-25": { coa: 2, digital_logic: 2 },
+  "2026-06-26": { coa: 2, digital_logic: 2 },
+  "2026-06-27": { coa: 2, digital_logic: 2 },
+  "2026-06-28": { coa: 2, digital_logic: 2 },
+  "2026-06-29": { coa: 2, digital_logic: 2 },
+  "2026-06-30": { coa: 2, digital_logic: 2 },
+  // JULY
+  "2026-07-01": { coa: 2, digital_logic: 2 },
+  "2026-07-02": { coa: 2, digital_logic: 2 },
+  "2026-07-03": { coa: 2, digital_logic: 2 },
+  "2026-07-04": { coa: 2, digital_logic: 2 },
+  "2026-07-05": { coa: 2, digital_logic: 2 },
+  "2026-07-06": { coa: 2, digital_logic: 2 },
+  "2026-07-07": { digital_logic: 2, cn: 2 },
+  "2026-07-08": { digital_logic: 2, cn: 2 },
+  "2026-07-09": { digital_logic: 2, cn: 2 },
+  "2026-07-10": { digital_logic: 2, cn: 2 },
+  "2026-07-11": { digital_logic: 2, cn: 2 },
+  "2026-07-12": { digital_logic: 2, cn: 2 },
+  "2026-07-13": { digital_logic: 2, cn: 2 },
+  "2026-07-14": { cn: 2, os: 2 },
+  "2026-07-15": { cn: 2, os: 2 },
+  "2026-07-16": { cn: 2, os: 2 },
+  "2026-07-17": { cn: 2, os: 2 },
+  "2026-07-18": { cn: 2, os: 2 },
+  "2026-07-19": { cn: 2, os: 2 },
+  "2026-07-20": { cn: 2, os: 2 },
+  "2026-07-21": { cn: 2, os: 2 },
+  "2026-07-22": { cn: 2, os: 2 },
+  "2026-07-23": { cn: 2, os: 2 },
+  "2026-07-24": { cn: 2, os: 2 },
+  "2026-07-25": { cn: 2, os: 2 },
+  "2026-07-26": { cn: 2, os: 2 },
+  "2026-07-27": { cn: 2, os: 1, compiler: 1 },
+  "2026-07-28": { cn: 1, compiler: 2, gen_aptitude: 1 },
+  "2026-07-29": { compiler: 2, gen_aptitude: 2 },
+  "2026-07-30": { compiler: 2, gen_aptitude: 2 },
+  "2026-07-31": { compiler: 2, gen_aptitude: 2 },
+  // AUGUST
+  "2026-08-01": { compiler: 2, gen_aptitude: 2 },
+  "2026-08-02": { compiler: 2, gen_aptitude: 2 },
+  "2026-08-03": { compiler: 2, gen_aptitude: 2 },
+  "2026-08-04": { compiler: 2, gen_aptitude: 2 },
+  "2026-08-05": { compiler: 2, gen_aptitude: 2 },
+  "2026-08-06": { gen_aptitude: 2, verbal: 1 },
+  "2026-08-07": { gen_aptitude: 2, verbal: 1 },
+  "2026-08-08": { gen_aptitude: 2, verbal: 1 },
+  "2026-08-09": { gen_aptitude: 1, verbal: 2 },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Build a flat lecture queue per subject (skipping pre-completed)
+// Returns: array of { subjectId, subjectName, chapterId, chapterName, lecNum, globalLecId }
+// ─────────────────────────────────────────────────────────────────────────────
 interface LecItem {
   subjectId: string;
   subjectName: string;
@@ -20,56 +167,35 @@ interface LecItem {
   chapterName: string;
   lecNum: number;
   globalLecId: string;
+  // test that fires AFTER this lecture is completed (if any)
+  triggeredTests: Array<{
+    testId: string;
+    subjectId: string;
+    subjectName: string;
+    chapterId: string;
+    chapterName: string;
+    testNum: number;
+    label: string;
+  }>;
 }
 
-interface TestItem {
-  testId: string;
-  subjectId: string;
-  subjectName: string;
-  chapterId: string;
-  chapterName: string;
-  testNum: number;
-  label: string;
-  triggerLec: number;
-}
+function buildLectureQueue(subjectId: string): LecItem[] {
+  const subject = SYLLABUS.find(s => s.id === subjectId);
+  if (!subject) return [];
+  const preCompleted = subject.preCompleted ?? 0;
+  const queue: LecItem[] = [];
+  let globalOffset = 0;
 
-interface ChapterQueue {
-  subjectId: string;
-  subjectName: string;
-  chapterId: string;
-  chapterName: string;
-  lectures: number;
-  startLec: number;
-  tests: TestItem[];
-  lecsDone: number; // how many assigned from this chapter so far
-}
-
-export function generateSchedule(): Record<string, DaySchedule> {
-  const schedule: Record<string, DaySchedule> = {};
-
-  // Build phase queues
-  const phase1Ids = ['prereq_math', 'discrete_math', 'fund_c', 'c_prog'];
-  const phase2Ids = ['prob_stats', 'linear_algebra', 'calculus', 'data_structures', 'algorithms'];
-  const phase3Ids = ['toc', 'digital_logic', 'coa', 'os'];
-  const phase4Ids = ['cn', 'compiler', 'dbms', 'gen_aptitude', 'verbal'];
-
-  // Build lecture queues per subject, skipping pre-completed
-  function buildChapterQueues(subjectIds: string[]): ChapterQueue[] {
-    const queues: ChapterQueue[] = [];
-    for (const sid of subjectIds) {
-      const subject: Subject | undefined = SYLLABUS.find(s => s.id === sid);
-      if (!subject) continue;
-      const preCompleted = subject.preCompleted ?? 0;
-      let globalLec = 0;
-      for (const ch of subject.chapters) {
-        const chStart = globalLec + 1;
-        const chEnd = globalLec + ch.lectures;
-        // Determine how many lecs in this chapter are pre-completed
-        const preInChapter = Math.max(0, Math.min(ch.lectures, preCompleted - globalLec));
-        const remainingInChapter = ch.lectures - preInChapter;
-        if (remainingInChapter > 0) {
-          const startLec = preInChapter + 1; // 1-based within chapter
-          const tests: TestItem[] = ch.tests.map(t => ({
+  for (const ch of subject.chapters) {
+    for (let l = 1; l <= ch.lectures; l++) {
+      const globalLecNum = globalOffset + l;
+      if (globalLecNum <= preCompleted) {
+        // already done — skip
+      } else {
+        // check if this lecture triggers any tests
+        const triggeredTests = ch.tests
+          .filter(t => t.triggerLec === l)
+          .map(t => ({
             testId: t.id,
             subjectId: subject.id,
             subjectName: subject.name,
@@ -77,167 +203,86 @@ export function generateSchedule(): Record<string, DaySchedule> {
             chapterName: ch.name,
             testNum: t.number,
             label: `${subject.name} — Test ${t.number}`,
-            triggerLec: t.triggerLec,
           }));
-          queues.push({
-            subjectId: subject.id,
-            subjectName: subject.name,
-            chapterId: ch.id,
-            chapterName: ch.name,
-            lectures: remainingInChapter,
-            startLec,
-            tests,
-            lecsDone: 0,
+
+        queue.push({
+          subjectId: subject.id,
+          subjectName: subject.name,
+          chapterId: ch.id,
+          chapterName: ch.name,
+          lecNum: l,
+          globalLecId: `${ch.id}_lec${l}`,
+          triggeredTests,
+        });
+      }
+    }
+    globalOffset += ch.lectures;
+  }
+  return queue;
+}
+
+// Build queues for all subjects upfront
+const LECTURE_QUEUES: Record<string, LecItem[]> = {};
+const QUEUE_POINTERS: Record<string, number> = {};
+
+function initQueues() {
+  for (const s of SYLLABUS) {
+    LECTURE_QUEUES[s.id] = buildLectureQueue(s.id);
+    QUEUE_POINTERS[s.id] = 0;
+  }
+}
+
+export function generateSchedule(): Record<string, DaySchedule> {
+  initQueues();
+  const schedule: Record<string, DaySchedule> = {};
+
+  for (const [dateKey, subjectCounts] of Object.entries(DAILY_PLAN)) {
+    const date = new Date(dateKey + 'T00:00:00');
+    const examPeriod = isExamPeriod(date);
+    const lectures: ScheduledLecture[] = [];
+    const tests: ScheduledTest[] = [];
+
+    for (const [subjectId, count] of Object.entries(subjectCounts)) {
+      const queue = LECTURE_QUEUES[subjectId];
+      if (!queue) continue;
+      let ptr = QUEUE_POINTERS[subjectId];
+
+      for (let i = 0; i < count; i++) {
+        if (ptr >= queue.length) break;
+        const item = queue[ptr];
+        ptr++;
+
+        lectures.push({
+          subjectId: item.subjectId,
+          subjectName: item.subjectName,
+          chapterId: item.chapterId,
+          chapterName: item.chapterName,
+          lecNum: item.lecNum,
+          globalLecId: item.globalLecId,
+        });
+
+        // attach triggered tests
+        for (const t of item.triggeredTests) {
+          tests.push({
+            testId: t.testId,
+            subjectId: t.subjectId,
+            subjectName: t.subjectName,
+            chapterId: t.chapterId,
+            chapterName: t.chapterName,
+            testNum: t.testNum,
+            label: t.label,
           });
         }
-        globalLec += ch.lectures;
       }
-    }
-    return queues;
-  }
-
-  const phase1Queues = buildChapterQueues(phase1Ids);
-  const phase2Queues = buildChapterQueues(phase2Ids);
-  const phase3Queues = buildChapterQueues(phase3Ids);
-  const phase4Queues = buildChapterQueues(phase4Ids);
-
-  // We'll use a global queue pointer
-  let allQueues = [
-    ...phase1Queues,
-    ...phase2Queues,
-    ...phase3Queues,
-    ...phase4Queues,
-  ];
-
-  // Phase date boundaries
-  const phase1End = new Date('2026-04-30').getTime();
-  const phase2End = new Date('2026-06-15').getTime();
-  const phase3End = new Date('2026-07-15').getTime();
-
-  function getActiveQueuesForDate(date: Date): ChapterQueue[] {
-    const t = date.getTime();
-    if (t <= phase1End) return phase1Queues.filter(q => q.lectures > q.lecsDone);
-    if (t <= phase2End) {
-      const p1rem = phase1Queues.filter(q => q.lectures > q.lecsDone);
-      const p2 = phase2Queues.filter(q => q.lectures > q.lecsDone);
-      return [...p1rem, ...p2];
-    }
-    if (t <= phase3End) {
-      const p1rem = phase1Queues.filter(q => q.lectures > q.lecsDone);
-      const p2rem = phase2Queues.filter(q => q.lectures > q.lecsDone);
-      const p3 = phase3Queues.filter(q => q.lectures > q.lecsDone);
-      return [...p1rem, ...p2rem, ...p3];
-    }
-    const p1rem = phase1Queues.filter(q => q.lectures > q.lecsDone);
-    const p2rem = phase2Queues.filter(q => q.lectures > q.lecsDone);
-    const p3rem = phase3Queues.filter(q => q.lectures > q.lecsDone);
-    const p4 = phase4Queues.filter(q => q.lectures > q.lecsDone);
-    return [...p1rem, ...p2rem, ...p3rem, ...p4];
-  }
-
-  // Assign lectures per day
-  const start = new Date('2026-04-04');
-  const end = new Date('2026-08-13');
-
-  // Track last subject used to avoid 4 consecutive from same
-  let lastSubjectId: string | null = null;
-  let consecutiveCount = 0;
-
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const key = getDayKey(d);
-    const examPeriod = isExamPeriod(d);
-    const budget = examPeriod ? 1 : 4;
-
-    const dayLectures: ScheduledLecture[] = [];
-    const dayTests: ScheduledTest[] = [];
-
-    const activeQueues = getActiveQueuesForDate(new Date(d));
-    if (activeQueues.length === 0) {
-      schedule[key] = {
-        date: key,
-        lectures: [],
-        tests: [],
-        isExamPeriod: examPeriod,
-        isRestDay: true,
-      };
-      continue;
+      QUEUE_POINTERS[subjectId] = ptr;
     }
 
-    let remaining = budget;
-    let queueIndex = 0;
-
-    // Find a good starting queue (interleave subjects)
-    // Sort active queues to put non-last-subject first
-    const sorted = [...activeQueues].sort((a, b) => {
-      if (a.subjectId === lastSubjectId && b.subjectId !== lastSubjectId) return 1;
-      if (b.subjectId === lastSubjectId && a.subjectId !== lastSubjectId) return -1;
-      return 0;
-    });
-
-    while (remaining > 0) {
-      // Check if any tests fire and cap lectures at 3 if so
-      const effectiveBudget = dayTests.length > 0 ? Math.min(remaining, 3 - dayLectures.length) : remaining;
-      if (effectiveBudget <= 0) break;
-
-      let assigned = false;
-      for (let i = 0; i < sorted.length; i++) {
-        const q = sorted[(queueIndex + i) % sorted.length];
-        if (q.lecsDone >= q.lectures) continue;
-
-        // Avoid too many consecutive from same subject (unless only 1 option)
-        if (sorted.filter(x => x.lecsDone < x.lectures).length > 1) {
-          if (dayLectures.filter(l => l.subjectId === q.subjectId).length >= 2) continue;
-        }
-
-        const lecNumInChapter = q.startLec + q.lecsDone;
-        const globalLecId = `${q.chapterId}_lec${lecNumInChapter}`;
-
-        const lecture: ScheduledLecture = {
-          subjectId: q.subjectId,
-          subjectName: q.subjectName,
-          chapterId: q.chapterId,
-          chapterName: q.chapterName,
-          lecNum: lecNumInChapter,
-          globalLecId,
-        };
-
-        q.lecsDone++;
-        dayLectures.push(lecture);
-        remaining--;
-
-        // Check if this lecture triggers any tests
-        for (const t of q.tests) {
-          if (t.triggerLec === lecNumInChapter) {
-            dayTests.push({
-              testId: t.testId,
-              subjectId: t.subjectId,
-              subjectName: t.subjectName,
-              chapterId: t.chapterId,
-              chapterName: t.chapterName,
-              testNum: t.testNum,
-              label: t.label,
-            });
-            // Cap remaining to 3 total lectures if test fires
-            if (dayLectures.length >= 3 && !examPeriod) {
-              remaining = 0;
-            }
-          }
-        }
-
-        queueIndex = (queueIndex + i + 1) % sorted.length;
-        assigned = true;
-        break;
-      }
-
-      if (!assigned) break;
-    }
-
-    schedule[key] = {
-      date: key,
-      lectures: dayLectures,
-      tests: dayTests,
+    schedule[dateKey] = {
+      date: dateKey,
+      lectures,
+      tests,
       isExamPeriod: examPeriod,
-      isRestDay: dayLectures.length === 0 && dayTests.length === 0,
+      isRestDay: lectures.length === 0 && tests.length === 0,
     };
   }
 
